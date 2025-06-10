@@ -1,21 +1,51 @@
 #pragma once
 
+#include <concepts>
 #include <expected>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
+#include <format>
 
 #include "types.hpp"
 
 namespace stdx::details {
 
-// здесь ваш код
+template <typename T>
+concept string_or_view =
+    std::same_as<std::remove_cv_t<T>, std::string> || std::same_as<std::remove_cv_t<T>, std::string_view>;
+
+template <typename T>
+std::expected<T, scan_error> parse_value(std::string_view input) {
+    return std::unexpected(scan_error{"Not implement"});
+}
+
+template <typename T>
+consteval std::string_view type_to_fmt() {
+    if constexpr (std::signed_integral<T>) {
+        return "%d";
+    } else if constexpr (std::unsigned_integral<T>) {
+        return "%u";
+    } else if constexpr (std::floating_point<T>) {
+        return "%f";
+    } else if constexpr (string_or_view<T>) {
+        return "%s";
+    } else {
+        static_assert(false, "Not supported type");
+    }
+}
 
 // Функция для парсинга значения с учетом спецификатора формата
 template <typename T>
 std::expected<T, scan_error> parse_value_with_format(std::string_view input, std::string_view fmt) {
-    // здесь ваш код
+    if (!fmt.empty() && fmt != type_to_fmt<T>()) {
+        return std::unexpected(scan_error{std::format(
+            "Incorrect format specified - \"{}\", expected - \"{}\"", fmt, type_to_fmt<T>())});
+    }
+
+    return parse_value<T>(input);
 }
 
 // Функция для проверки корректности входных данных и выделения из обеих строк интересующих данных для парсинга
@@ -70,4 +100,4 @@ parse_sources(std::string_view input, std::string_view format) {
     return std::pair{format_parts, input_parts};
 }
 
-} // namespace stdx::details
+}  // namespace stdx::details
