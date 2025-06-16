@@ -15,8 +15,7 @@ std::expected<details::scan_result<Ts...>, details::scan_error> scan(std::string
         return std::unexpected(std::move(string_values.error()));
     }
 
-    const auto &formats = string_values->first;
-    const auto &inputs = string_values->second;
+    const auto &[formats, inputs] = string_values.value();
 
     if (formats.size() != inputs.size()) {
         return std::unexpected{details::scan_error{std::format(

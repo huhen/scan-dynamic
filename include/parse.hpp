@@ -13,9 +13,8 @@
 
 namespace stdx::details {
 
-template <typename T>
-concept string_or_view =
-    std::same_as<std::remove_cv_t<T>, std::string> || std::same_as<std::remove_cv_t<T>, std::string_view>;
+template <class T>
+concept StringLike = std::is_convertible_v<std::remove_cv_t<T>, std::string_view>;
 
 template <typename T>
     requires std::integral<T> || std::floating_point<T>
@@ -27,7 +26,7 @@ std::expected<T, scan_error> parse_value(std::string_view input) {
         return result;
     }
 
-    std::error_code ec(err, std::generic_category());
+    std::error_code ec(static_cast<int>(err), std::generic_category());
     scan_error se;
 
     if (err == std::errc::invalid_argument) {
@@ -42,7 +41,7 @@ std::expected<T, scan_error> parse_value(std::string_view input) {
 }
 
 template <typename T>
-    requires string_or_view<T>
+    requires StringLike<T>
 std::expected<T, scan_error> parse_value(std::string_view input) {
     return std::string(input);
 }
@@ -55,7 +54,7 @@ consteval std::string_view type_to_fmt() {
         return "%u";
     } else if constexpr (std::floating_point<T>) {
         return "%f";
-    } else if constexpr (string_or_view<T>) {
+    } else if constexpr (StringLike<T>) {
         return "%s";
     } else {
         static_assert(false, "Not supported type");
