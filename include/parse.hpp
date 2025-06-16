@@ -43,7 +43,7 @@ std::expected<T, scan_error> parse_value(std::string_view input) {
 template <typename T>
     requires StringLike<T>
 std::expected<T, scan_error> parse_value(std::string_view input) {
-    return std::string(input);
+    return T(input);
 }
 
 template <typename T>
