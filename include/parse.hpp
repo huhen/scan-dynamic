@@ -19,7 +19,7 @@ concept StringLike = std::is_convertible_v<std::remove_cv_t<T>, std::string_view
 template <typename T>
     requires std::integral<T> || std::floating_point<T>
 std::expected<T, scan_error> parse_value(std::string_view input) {
-    T result;
+    std::remove_cv_t<T> result;
     auto err = std::from_chars(input.begin(), input.end(), result).ec;
 
     if (err == std::errc()) {
@@ -43,6 +43,8 @@ std::expected<T, scan_error> parse_value(std::string_view input) {
 template <typename T>
     requires StringLike<T>
 std::expected<T, scan_error> parse_value(std::string_view input) {
+    static_assert(!std::is_volatile_v<T>,
+                  "Not support volatile qualification for string like types");  // Оно вообще нужно? В этом есть смысл?
     return T(input);
 }
 
