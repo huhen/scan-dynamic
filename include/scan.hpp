@@ -51,7 +51,7 @@ std::expected<details::scan_result<Ts...>, details::scan_error> scan(std::string
     }
 
     return [&]<std::size_t... Is>(std::index_sequence<Is...>) -> details::scan_result<Ts...> {
-        return {std::move(std::get<Is>(values)).value()...};
+        return {std::make_tuple((std::move(std::get<Is>(values)).value())...)};
     }(std::index_sequence_for<Ts...>{});
 }
 
