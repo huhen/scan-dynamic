@@ -2,12 +2,12 @@
 
 #include <concepts>
 #include <expected>
+#include <format>
 #include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <format>
 
 #include "types.hpp"
 
@@ -18,8 +18,33 @@ concept string_or_view =
     std::same_as<std::remove_cv_t<T>, std::string> || std::same_as<std::remove_cv_t<T>, std::string_view>;
 
 template <typename T>
+    requires std::integral<T> || std::floating_point<T>
 std::expected<T, scan_error> parse_value(std::string_view input) {
-    return std::unexpected(scan_error{"Not implement"});
+    T result;
+    auto err = std::from_chars(input.begin(), input.end(), result).ec;
+
+    if (err == std::errc()) {
+        return result;
+    }
+
+    std::error_code ec(err, std::generic_category());
+    scan_error se;
+
+    if (err == std::errc::invalid_argument) {
+        se.message = std::format("{} - \"{}\" this is not a number for \"{}\"", ec.message(), input, typeid(T).name());
+    } else if (err == std::errc::result_out_of_range) {
+        se.message = std::format("{} - \"{}\" is out of range for \"{}\"", ec.message(), input, typeid(T).name());
+    } else {
+        se.message = std::format("{} - \"{}\" on parse to \"{}\"", ec.message(), input, typeid(T).name());
+    }
+
+    return std::unexpected(std::move(se));
+}
+
+template <typename T>
+    requires string_or_view<T>
+std::expected<T, scan_error> parse_value(std::string_view input) {
+    return std::string(input);
 }
 
 template <typename T>
@@ -41,8 +66,9 @@ consteval std::string_view type_to_fmt() {
 template <typename T>
 std::expected<T, scan_error> parse_value_with_format(std::string_view input, std::string_view fmt) {
     if (!fmt.empty() && fmt != type_to_fmt<T>()) {
-        return std::unexpected(scan_error{std::format(
-            "Incorrect format specified - \"{}\", expected - \"{}\"", fmt, type_to_fmt<T>())});
+        return std::unexpected(
+            scan_error{std::format("Incorrect format specified - \"{}\", expected - \"{}\" for type \"{}\"", fmt,
+                                   type_to_fmt<T>(), typeid(T).name())});
     }
 
     return parse_value<T>(input);
