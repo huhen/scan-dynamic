@@ -15,10 +15,10 @@ struct scan_error {
 template <typename... Ts>
 struct scan_result {
     std::tuple<Ts...> scan_values;
-    const std::tuple<Ts...> &values(void) { return scan_values; }
+    const std::tuple<Ts...> &values(void) const { return scan_values; }
 
     template <std::size_t Idx>
-    constexpr const auto &get() {
+    constexpr const auto &get() const {
         return std::get<Idx>(scan_values);
     }
 };
