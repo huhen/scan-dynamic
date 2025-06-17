@@ -18,6 +18,7 @@ std::expected<details::scan_result<Ts...>, details::scan_error> scan(std::string
     const auto &[formats, inputs] = string_values.value();
 
     if (formats.size() != inputs.size()) {
+        // На случай ошибок в details::parse_sources...
         return std::unexpected{details::scan_error{std::format(
             "The number of placeholders({}) does not match the number of inputs({})", formats.size(), inputs.size())}};
     }
