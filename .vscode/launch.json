@@ -7,16 +7,10 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Launch DymanicScan",
-            "program": "${workspaceFolder}/build/DymanicScan",
-            "args": [
-                "-i",
-                "input.txt",
-                "--command",
-                "checksum"
-            ],
+            "name": "Launch DymanicScan GTest",
+            "program": "${workspaceFolder}/build/scan_tests",
+            "args": [],
             "cwd": "${workspaceFolder}/build"
         }
-
     ]
 }

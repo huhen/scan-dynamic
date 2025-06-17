@@ -1,8 +1,11 @@
 #pragma once
 
+#include <concepts>
 #include <expected>
+#include <format>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -10,12 +13,66 @@
 
 namespace stdx::details {
 
-// здесь ваш код
+template <class T>
+concept StringLike = std::is_convertible_v<std::remove_cv_t<T>, std::string_view>;
+
+template <typename T>
+    requires std::integral<T> || std::floating_point<T>
+std::expected<T, scan_error> parse_value(std::string_view input) {
+    std::remove_cv_t<T> result;
+    auto err = std::from_chars(input.begin(), input.end(), result).ec;
+
+    if (err == std::errc()) {
+        return result;
+    }
+
+    std::error_code ec(static_cast<int>(err), std::generic_category());
+    scan_error se;
+
+    if (err == std::errc::invalid_argument) {
+        se.message = std::format("{} - \"{}\" this is not a number for \"{}\"", ec.message(), input, typeid(T).name());
+    } else if (err == std::errc::result_out_of_range) {
+        se.message = std::format("{} - \"{}\" is out of range for \"{}\"", ec.message(), input, typeid(T).name());
+    } else {
+        se.message = std::format("{} - \"{}\" on parse to \"{}\"", ec.message(), input, typeid(T).name());
+    }
+
+    return std::unexpected(std::move(se));
+}
+
+template <typename T>
+    requires StringLike<T>
+std::expected<T, scan_error> parse_value(std::string_view input) {
+    static_assert(!std::is_volatile_v<T>,
+                  "Not support volatile qualification for string like types");  // Оно вообще нужно? В этом есть смысл?
+    return T(input);
+}
+
+template <typename T>
+consteval std::string_view type_to_fmt() {
+    if constexpr (std::signed_integral<T>) {
+        return "%d";
+    } else if constexpr (std::unsigned_integral<T>) {
+        return "%u";
+    } else if constexpr (std::floating_point<T>) {
+        return "%f";
+    } else if constexpr (StringLike<T>) {
+        return "%s";
+    } else {
+        static_assert(false, "Not supported type");
+    }
+}
 
 // Функция для парсинга значения с учетом спецификатора формата
 template <typename T>
 std::expected<T, scan_error> parse_value_with_format(std::string_view input, std::string_view fmt) {
-    // здесь ваш код
+    if (!fmt.empty() && fmt != type_to_fmt<T>()) {
+        return std::unexpected(
+            scan_error{std::format("Incorrect format specified - \"{}\", expected - \"{}\" for type \"{}\"", fmt,
+                                   type_to_fmt<T>(), typeid(T).name())});
+    }
+
+    return parse_value<T>(input);
 }
 
 // Функция для проверки корректности входных данных и выделения из обеих строк интересующих данных для парсинга
@@ -70,4 +127,4 @@ parse_sources(std::string_view input, std::string_view format) {
     return std::pair{format_parts, input_parts};
 }
 
-} // namespace stdx::details
+}  // namespace stdx::details
